@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'favorites_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -21,8 +22,12 @@ class SettingsScreen extends StatelessWidget {
             icon: Icons.favorite,
             title: 'Favorites',
             onTap: () {
-              // TODO: Navigate to favorites
-              print('Navigate to Favorites');
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const FavoritesScreen(),
+                ),
+              );
             },
           ),
           _buildSettingsItem(

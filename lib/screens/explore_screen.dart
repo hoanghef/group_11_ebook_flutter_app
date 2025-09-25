@@ -4,6 +4,7 @@ import '../data/categories.dart';
 import '../models/book.dart';
 import '../models/category.dart';
 import 'book_detail_screen.dart';
+import 'category_books_screen.dart';
 
 class ExploreScreen extends StatelessWidget {
   const ExploreScreen({super.key});
@@ -28,63 +29,62 @@ class ExploreScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Categories Section
-            _buildCategorySection(categories, books),
+            ...categories.take(3).map((category) {
+              // Lọc sách theo category
+              final categoryBooks = books.where((book) =>
+                  book.categories.contains(category.name)).take(3).toList();
 
-            const SizedBox(height: 20),
+              if (categoryBooks.isEmpty) return const SizedBox.shrink();
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          category.name,
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => CategoryBooksScreen(
+                                  categoryName: category.name,
+                                ),
+                              ),
+                            );
+                          },
+                          child: const Text('See All'),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(
+                    height: 220,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemCount: categoryBooks.length,
+                      itemBuilder: (context, index) {
+                        return _buildBookCard(categoryBooks[index], context);
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                ],
+              );
+            }).toList(),
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildCategorySection(List<Category> categories, List<Book> books) {
-    return Column(
-      children: categories.take(3).map((category) {
-        // Lọc sách theo category
-        final categoryBooks = books.where((book) =>
-            book.categories.contains(category.name)).take(3).toList();
-
-        if (categoryBooks.isEmpty) return const SizedBox.shrink();
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    category.name,
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: () {
-                      // TODO: Navigate to category books screen
-                      print('See all ${category.name}');
-                    },
-                    child: const Text('See All'),
-                  ),
-                ],
-              ),
-            ),
-            SizedBox(
-              height: 220,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: categoryBooks.length,
-                itemBuilder: (context, index) {
-                  return _buildBookCard(categoryBooks[index], context);
-                },
-              ),
-            ),
-          ],
-        );
-      }).toList(),
     );
   }
 

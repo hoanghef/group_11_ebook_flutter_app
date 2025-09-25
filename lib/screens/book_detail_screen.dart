@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/book.dart';
+import '../services/storage_service.dart';
+import 'book_reader_screen.dart';
 
 class BookDetailScreen extends StatefulWidget {
   final Book book;
@@ -20,7 +22,15 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
   @override
   void initState() {
     super.initState();
-    isFavorite = widget.book.isFavorite;
+    _loadFavoriteStatus();
+  }
+
+  Future<void> _loadFavoriteStatus() async {
+    final isFav = await StorageService.isFavorite(widget.book.id);
+    setState(() {
+      isFavorite = isFav;
+      widget.book.isFavorite = isFav;
+    });
   }
 
   @override
@@ -39,21 +49,25 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
               isFavorite ? Icons.favorite : Icons.favorite_border,
               color: isFavorite ? Colors.red : Colors.black,
             ),
-            onPressed: () {
+            onPressed: () async {
+              final newStatus = await StorageService.toggleFavorite(widget.book.id);
               setState(() {
-                isFavorite = !isFavorite;
-                widget.book.isFavorite = isFavorite;
+                isFavorite = newStatus;
+                widget.book.isFavorite = newStatus;
               });
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    isFavorite
-                        ? 'Added to favorites'
-                        : 'Removed from favorites',
+
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      isFavorite
+                          ? 'Added to favorites'
+                          : 'Removed from favorites',
+                    ),
+                    duration: const Duration(seconds: 2),
                   ),
-                  duration: const Duration(seconds: 2),
-                ),
-              );
+                );
+              }
             },
           ),
           IconButton(
@@ -210,10 +224,10 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
             height: 50,
             child: ElevatedButton(
               onPressed: () {
-                // TODO: Navigate to book reader
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Book reader coming soon!'),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => BookReaderScreen(book: widget.book),
                   ),
                 );
               },
