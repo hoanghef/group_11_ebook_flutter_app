@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../data/sample_books.dart';
 import '../models/book.dart';
 import 'book_detail_screen.dart';
+import 'search_screen.dart';
 
 class HomeTabScreen extends StatelessWidget {
   const HomeTabScreen({super.key});
