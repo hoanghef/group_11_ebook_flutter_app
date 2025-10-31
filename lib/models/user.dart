@@ -3,7 +3,7 @@ class User {
   final String id;
   final String email;
   final String name;
-  final String password; // In production, never store plain password
+  final String password;
   final DateTime createdAt;
 
   User({
