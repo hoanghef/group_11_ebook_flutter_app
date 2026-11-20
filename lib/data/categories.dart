@@ -7,42 +7,67 @@ class SampleCategories {
       Category(
         id: 'short_stories',
         name: 'Short Stories',
-        description: 'Quick reads and compelling tales',
+        description: 'Brief stories for a short reading break.',
       ),
       Category(
         id: 'science_fiction',
         name: 'Science Fiction',
-        description: 'Futuristic adventures and space exploration',
+        description: 'Imagined tools, futures, and discoveries.',
       ),
       Category(
         id: 'action_adventure',
         name: 'Action & Adventure',
-        description: 'Thrilling stories and exciting journeys',
+        description: 'Journeys driven by movement and risk.',
       ),
       Category(
         id: 'fiction',
         name: 'Fiction',
-        description: 'Literary works and imaginative stories',
+        description: 'Invented people, places, and choices.',
       ),
       Category(
         id: 'classic',
         name: 'Classic',
-        description: 'Timeless literature and masterpieces',
+        description: 'Stories with themes that invite revisiting.',
       ),
       Category(
         id: 'fantasy',
         name: 'Fantasy',
-        description: 'Magical worlds and mythical creatures',
+        description: 'Worlds with rules beyond the everyday.',
       ),
       Category(
         id: 'mystery',
         name: 'Mystery',
-        description: 'Suspenseful tales and detective stories',
+        description: 'Clues and unanswered questions.',
       ),
       Category(
         id: 'romance',
         name: 'Romance',
-        description: 'Love stories and romantic adventures',
+        description: 'Stories about growing affection.',
+      ),
+      Category(
+        id: 'drama',
+        name: 'Drama',
+        description: 'Choices with emotional stakes.',
+      ),
+      Category(
+        id: 'children',
+        name: 'Children',
+        description: 'Gentle adventures for younger readers.',
+      ),
+      Category(
+        id: 'thriller',
+        name: 'Thriller',
+        description: 'Tense moments and uncertain outcomes.',
+      ),
+      Category(
+        id: 'historical_fiction',
+        name: 'Historical Fiction',
+        description: 'Invented stories in imagined past settings.',
+      ),
+      Category(
+        id: 'psychology',
+        name: 'Psychology',
+        description: 'Stories shaped by thought and memory.',
       ),
     ];
   }

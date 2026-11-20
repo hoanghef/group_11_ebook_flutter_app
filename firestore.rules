@@ -1,0 +1,178 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAdmin() {
+      return request.auth != null && request.auth.token.admin == true;
+    }
+
+    function validId(value) {
+      return value is string && value.matches('^[a-z0-9_-]{1,80}$');
+    }
+
+    function validEntryId(value) {
+      return value is string && value.matches('^[A-Za-z0-9_-]{1,80}$');
+    }
+
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    function validFavorite(bookId, data) {
+      return validId(bookId)
+        && data.keys().hasAll(['bookId', 'createdAt'])
+        && data.keys().hasOnly(['bookId', 'createdAt'])
+        && data.bookId == bookId
+        && data.createdAt is timestamp;
+    }
+
+    function validProgress(bookId, data) {
+      return validId(bookId)
+        && data.keys().hasAll(['bookId', 'ratio', 'updatedAt'])
+        && data.keys().hasOnly(['bookId', 'ratio', 'updatedAt'])
+        && data.bookId == bookId
+        && data.ratio is number && data.ratio >= 0 && data.ratio <= 1
+        && data.updatedAt is timestamp;
+    }
+
+    function validBookmark(entryId, data) {
+      return validEntryId(entryId)
+        && data.keys().hasAll(['bookId', 'ratio', 'label', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['bookId', 'ratio', 'label', 'createdAt', 'updatedAt'])
+        && validId(data.bookId)
+        && data.ratio is number && data.ratio >= 0 && data.ratio <= 1
+        && data.label is string && data.label.size() <= 80
+        && data.createdAt is timestamp && data.updatedAt is timestamp;
+    }
+
+    function validNote(entryId, data) {
+      return validEntryId(entryId)
+        && data.keys().hasAll(['bookId', 'text', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['bookId', 'text', 'createdAt', 'updatedAt'])
+        && validId(data.bookId)
+        && data.text is string && data.text.size() > 0 && data.text.size() <= 2000
+        && data.createdAt is timestamp && data.updatedAt is timestamp;
+    }
+
+    function validSearchHistory(entryId, data) {
+      return validEntryId(entryId)
+        && data.keys().hasAll(['query', 'submittedAt'])
+        && data.keys().hasOnly(['query', 'submittedAt'])
+        && data.query is string
+        && data.query.size() > 0 && data.query.size() <= 100
+        && data.submittedAt is timestamp;
+    }
+
+    function validCategoryIds(ids) {
+      return ids is list && ids.size() >= 1 && ids.size() <= 5
+        && validId(ids[0])
+        && (ids.size() < 2 || validId(ids[1]))
+        && (ids.size() < 3 || validId(ids[2]))
+        && (ids.size() < 4 || validId(ids[3]))
+        && (ids.size() < 5 || validId(ids[4]));
+    }
+
+    function validBook(id, data) {
+      return data.keys().hasAll([
+          'id', 'title', 'author', 'description', 'coverRef',
+          'categoryIds', 'status', 'createdAt', 'updatedAt',
+          'preview', 'contentRef'
+        ])
+        && data.keys().hasOnly([
+          'id', 'title', 'author', 'description', 'coverRef',
+          'categoryIds', 'status', 'createdAt', 'updatedAt',
+          'preview', 'contentRef'
+        ])
+        && validId(id) && data.id == id
+        && data.title is string && data.title.size() > 0 && data.title.size() <= 200
+        && data.author is string && data.author.size() > 0 && data.author.size() <= 200
+        && data.description is string && data.description.size() <= 2000
+        && data.coverRef is string && data.coverRef.size() <= 500
+        && validCategoryIds(data.categoryIds)
+        && data.status in ['draft', 'published', 'archived']
+        && data.preview is string && data.preview.size() <= 2000
+        && data.contentRef is string && data.contentRef.size() <= 500
+        && data.createdAt is timestamp && data.updatedAt is timestamp;
+    }
+
+    function validCategory(id, data) {
+      return data.keys().hasAll([
+          'id', 'name', 'description', 'active', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'name', 'description', 'active', 'createdAt', 'updatedAt'
+        ])
+        && validId(id) && data.id == id
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 100
+        && data.description is string && data.description.size() <= 500
+        && data.active is bool
+        && data.createdAt is timestamp && data.updatedAt is timestamp;
+    }
+
+    match /books/{bookId} {
+      allow get, list: if isAdmin() || resource.data.status == 'published';
+      allow create: if isAdmin() && validBook(bookId, request.resource.data);
+      allow update: if isAdmin()
+        && validBook(bookId, request.resource.data)
+        && request.resource.data.id == resource.data.id
+        && request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if false;
+    }
+
+    match /categories/{categoryId} {
+      allow get, list: if isAdmin() || resource.data.active == true;
+      allow create: if isAdmin() && validCategory(categoryId, request.resource.data);
+      allow update: if isAdmin()
+        && validCategory(categoryId, request.resource.data)
+        && request.resource.data.id == resource.data.id
+        && request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if false;
+    }
+
+    match /users/{uid}/favorites/{bookId} {
+      allow get, list: if isOwner(uid);
+      allow create, update: if isOwner(uid)
+        && validFavorite(bookId, request.resource.data);
+      allow delete: if isOwner(uid);
+    }
+
+    match /users/{uid}/readingProgress/{bookId} {
+      allow get, list: if isOwner(uid);
+      allow create, update: if isOwner(uid)
+        && validProgress(bookId, request.resource.data);
+      allow delete: if isOwner(uid);
+    }
+
+    match /users/{uid}/bookmarks/{bookmarkId} {
+      allow get, list: if isOwner(uid);
+      allow create: if isOwner(uid)
+        && validBookmark(bookmarkId, request.resource.data);
+      allow update: if isOwner(uid)
+        && validBookmark(bookmarkId, request.resource.data)
+        && request.resource.data.bookId == resource.data.bookId
+        && request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if isOwner(uid);
+    }
+
+    match /users/{uid}/notes/{noteId} {
+      allow get, list: if isOwner(uid);
+      allow create: if isOwner(uid)
+        && validNote(noteId, request.resource.data);
+      allow update: if isOwner(uid)
+        && validNote(noteId, request.resource.data)
+        && request.resource.data.bookId == resource.data.bookId
+        && request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if isOwner(uid);
+    }
+
+    match /users/{uid}/searchHistory/{searchId} {
+      allow get, list: if isOwner(uid);
+      allow create, update: if isOwner(uid)
+        && validSearchHistory(searchId, request.resource.data);
+      allow delete: if isOwner(uid);
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -4,9 +4,12 @@ class Book {
   final String author;
   final String coverImage;
   final String description;
-  final List<String> categories;
+  final List<String> categoryIds;
   final String content;
-  bool isFavorite;
+  final String? contentRef;
+  final bool isPublished;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
 
   Book({
     required this.id,
@@ -14,8 +17,11 @@ class Book {
     required this.author,
     required this.coverImage,
     required this.description,
-    required this.categories,
+    required List<String> categoryIds,
     required this.content,
-    this.isFavorite = false,
-  });
+    this.contentRef,
+    this.isPublished = true,
+    this.createdAt,
+    this.updatedAt,
+  }) : categoryIds = List.unmodifiable(categoryIds);
 }

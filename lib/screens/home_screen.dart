@@ -16,7 +16,7 @@ class _HomeScreenState extends State<HomeScreen> {
   // Danh sách các screens
   final List<Widget> _screens = [
     const HomeTabScreen(), // Tab Home
-    const ExploreScreen(),  // Tab Explore
+    const ExploreScreen(), // Tab Explore
     const SettingsScreen(), // Tab Settings
   ];
 
@@ -25,7 +25,10 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       body: IndexedStack(
         index: _currentIndex,
-        children: _screens,
+        children: [
+          for (var index = 0; index < _screens.length; index++)
+            HeroMode(enabled: index == _currentIndex, child: _screens[index]),
+        ],
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
@@ -38,14 +41,8 @@ class _HomeScreenState extends State<HomeScreen> {
         selectedItemColor: Colors.blue,
         unselectedItemColor: Colors.grey,
         items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.explore),
-            label: 'Explore',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.explore), label: 'Explore'),
           BottomNavigationBarItem(
             icon: Icon(Icons.settings),
             label: 'Settings',

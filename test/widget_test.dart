@@ -1,30 +1,50 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
+import 'package:app_ebook/main.dart';
+import 'package:app_ebook/screens/login_screen.dart';
+import 'package:app_ebook/screens/register_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:app_ebook/main.dart';
+import 'fake_auth_repository.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('EbookApp opens the login screen', (tester) async {
+    await tester.pumpWidget(EbookApp(authRepository: FakeAuthRepository()));
+    await tester.pumpAndSettle();
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    expect(find.byType(LoginScreen), findsOneWidget);
+    expect(find.text('Welcome Back'), findsOneWidget);
+    expect(find.widgetWithText(ElevatedButton, 'Login'), findsOneWidget);
+  });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
+  testWidgets('Empty login form shows required field errors', (tester) async {
+    await tester.pumpWidget(EbookApp(authRepository: FakeAuthRepository()));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Login'));
     await tester.pump();
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    expect(find.text('Please enter your email'), findsOneWidget);
+    expect(find.text('Please enter your password'), findsOneWidget);
+    expect(find.byType(LoginScreen), findsOneWidget);
+  });
+
+  testWidgets('Registration opens and validates required fields', (
+    tester,
+  ) async {
+    await tester.pumpWidget(EbookApp(authRepository: FakeAuthRepository()));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(TextButton, 'Register'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(RegisterScreen), findsOneWidget);
+    await tester.ensureVisible(find.widgetWithText(ElevatedButton, 'Register'));
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Register'));
+    await tester.pump();
+
+    expect(find.text('Please enter your name'), findsOneWidget);
+    expect(find.text('Please enter your email'), findsOneWidget);
+    expect(find.text('Please enter your password'), findsOneWidget);
+    expect(find.text('Please confirm your password'), findsOneWidget);
+    expect(find.byType(RegisterScreen), findsOneWidget);
   });
 }

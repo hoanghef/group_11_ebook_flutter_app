@@ -1,40 +1,30 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import '../controllers/auth_controller.dart';
+import '../controllers/auth_scope.dart';
+import '../controllers/catalog_scope.dart';
 import '../models/book.dart';
-import '../services/storage_service.dart';
+import '../widgets/book_cover.dart';
+import '../controllers/user_library_scope.dart';
 import 'book_reader_screen.dart';
 
 class BookDetailScreen extends StatefulWidget {
   final Book book;
 
-  const BookDetailScreen({
-    super.key,
-    required this.book,
-  });
+  const BookDetailScreen({super.key, required this.book});
 
   @override
   State<BookDetailScreen> createState() => _BookDetailScreenState();
 }
 
 class _BookDetailScreenState extends State<BookDetailScreen> {
-  bool isFavorite = false;
   bool showFullDescription = false;
 
   @override
-  void initState() {
-    super.initState();
-    _loadFavoriteStatus();
-  }
-
-  Future<void> _loadFavoriteStatus() async {
-    final isFav = await StorageService.isFavorite(widget.book.id);
-    setState(() {
-      isFavorite = isFav;
-      widget.book.isFavorite = isFav;
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
+    final signedIn = AuthScope.of(context).status == AuthStatus.signedIn;
+    final library = UserLibraryScope.of(context);
+    final isFavorite = library.isFavorite(widget.book.id);
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -44,40 +34,62 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
+          if (signedIn && library.favoritesError != null)
+            IconButton(
+              tooltip: 'Retry favorites',
+              icon: const Icon(Icons.refresh),
+              onPressed: library.loadFavorites,
+            ),
           IconButton(
+            tooltip: signedIn ? 'Favorite' : 'Sign in to save favorites',
             icon: Icon(
               isFavorite ? Icons.favorite : Icons.favorite_border,
               color: isFavorite ? Colors.red : Colors.black,
             ),
-            onPressed: () async {
-              final newStatus = await StorageService.toggleFavorite(widget.book.id);
-              setState(() {
-                isFavorite = newStatus;
-                widget.book.isFavorite = newStatus;
-              });
-
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      isFavorite
-                          ? 'Added to favorites'
-                          : 'Removed from favorites',
-                    ),
-                    duration: const Duration(seconds: 2),
-                  ),
-                );
-              }
-            },
+            onPressed:
+                !signedIn ||
+                    library.isLoadingFavorites ||
+                    library.favoritesError != null ||
+                    library.isWritingFavorite(widget.book.id)
+                ? null
+                : () async {
+                    final uid = library.uid;
+                    final saved = await library.setFavorite(
+                      widget.book.id,
+                      !isFavorite,
+                    );
+                    if (!context.mounted || library.uid != uid) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          saved
+                              ? (library.isFavorite(widget.book.id)
+                                    ? 'Added to favorites'
+                                    : 'Removed from favorites')
+                              : 'Favorite could not be saved. Retry from Favorites.',
+                        ),
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  },
           ),
           IconButton(
-            icon: const Icon(Icons.share, color: Colors.black),
-            onPressed: () {
-              // TODO: Implement share functionality
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Share feature coming soon!'),
+            tooltip: 'Copy book details',
+            icon: const Icon(Icons.copy, color: Colors.black),
+            onPressed: () async {
+              final description = widget.book.description.trim();
+              final summary = description.length <= 180
+                  ? description
+                  : '${description.substring(0, 180)}…';
+              await Clipboard.setData(
+                ClipboardData(
+                  text:
+                      '${widget.book.title} — ${widget.book.author}\n$summary',
                 ),
+              );
+              if (!context.mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Public book details copied.')),
               );
             },
           ),
@@ -100,7 +112,7 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
             // Book Description
             _buildDescriptionSection(),
 
-            // More from Author (placeholder)
+            // More from Author
             _buildMoreFromAuthor(),
           ],
         ),
@@ -116,10 +128,7 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [
-            Colors.grey[100]!,
-            Colors.white,
-          ],
+          colors: [Colors.grey[100]!, Colors.white],
         ),
       ),
       child: Column(
@@ -130,27 +139,7 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
             tag: 'book_${widget.book.id}',
             child: ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: Image.asset(
-                widget.book.coverImage,
-                width: 200,
-                height: 280,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    width: 200,
-                    height: 280,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[300],
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(
-                      Icons.book,
-                      size: 80,
-                      color: Colors.grey,
-                    ),
-                  );
-                },
-              ),
+              child: BookCover(book: widget.book, width: 200, height: 280),
             ),
           ),
         ],
@@ -186,7 +175,7 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: widget.book.categories.map((category) {
+            children: widget.book.categoryIds.map((categoryId) {
               return Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 12,
@@ -198,7 +187,7 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
                   border: Border.all(color: Colors.blue[200]!),
                 ),
                 child: Text(
-                  category,
+                  CatalogScope.of(context).categoryName(categoryId),
                   style: TextStyle(
                     fontSize: 12,
                     color: Colors.blue[700],
@@ -240,11 +229,8 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
                 elevation: 2,
               ),
               child: const Text(
-                'Read Book',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
+                'Read Preview',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
             ),
           ),
@@ -303,6 +289,8 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
   }
 
   Widget _buildMoreFromAuthor() {
+    final related = CatalogScope.of(context).moreFromAuthor(widget.book);
+    if (related.isEmpty) return const SizedBox.shrink();
     return Padding(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -317,41 +305,16 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          Container(
-            width: double.infinity,
-            height: 120,
-            decoration: BoxDecoration(
-              color: Colors.grey[100],
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.book_outlined,
-                    size: 40,
-                    color: Colors.grey[400],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'More books by ${widget.book.author}',
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: 14,
-                    ),
-                  ),
-                  Text(
-                    'Coming soon!',
-                    style: TextStyle(
-                      color: Colors.grey[500],
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
+          for (final book in related)
+            ListTile(
+              leading: const Icon(Icons.book_outlined),
+              title: Text(book.title),
+              subtitle: Text(book.author),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => BookDetailScreen(book: book)),
               ),
             ),
-          ),
         ],
       ),
     );

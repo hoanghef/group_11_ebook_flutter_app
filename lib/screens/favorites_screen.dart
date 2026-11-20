@@ -1,273 +1,132 @@
 import 'package:flutter/material.dart';
+import '../controllers/auth_controller.dart';
+import '../controllers/auth_scope.dart';
+import '../controllers/catalog_scope.dart';
+import '../controllers/user_library_scope.dart';
 import '../models/book.dart';
-import '../data/sample_books.dart';
-import '../services/storage_service.dart';
+import '../widgets/book_cover.dart';
 import 'book_detail_screen.dart';
 
-class FavoritesScreen extends StatefulWidget {
+class FavoritesScreen extends StatelessWidget {
   const FavoritesScreen({super.key});
 
   @override
-  State<FavoritesScreen> createState() => _FavoritesScreenState();
-}
-
-class _FavoritesScreenState extends State<FavoritesScreen> {
-  List<Book> favoriteBooks = [];
-  bool isLoading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadFavorites();
-  }
-
-  Future<void> _loadFavorites() async {
-    setState(() {
-      isLoading = true;
-    });
-
-    final favoriteIds = await StorageService.getFavorites();
-    final allBooks = SampleBooks.getAllBooks();
-
-    final favorites = allBooks.where((book) =>
-        favoriteIds.contains(book.id)).toList();
-
-    setState(() {
-      favoriteBooks = favorites;
-      isLoading = false;
-    });
-  }
-
-  Future<void> _removeFavorite(String bookId) async {
-    await StorageService.removeFavorite(bookId);
-    await _loadFavorites(); // Reload danh sách
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Removed from favorites'),
-          duration: Duration(seconds: 2),
-        ),
+  Widget build(BuildContext context) {
+    final library = UserLibraryScope.of(context);
+    if (AuthScope.of(context).status != AuthStatus.signedIn) {
+      return const Scaffold(
+        body: Center(child: Text('Sign in to use favorites')),
       );
     }
-  }
+    final books = CatalogScope.of(
+      context,
+    ).books.where((book) => library.isFavorite(book.id)).toList();
 
-  @override
-  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Favorites',
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+        title: const Text('Favorites'),
         actions: [
-          if (favoriteBooks.isNotEmpty)
+          if (books.isNotEmpty &&
+              !library.isLoadingFavorites &&
+              !library.isWritingFavorites)
             TextButton(
-              onPressed: () {
-                _showClearAllDialog();
-              },
+              onPressed: () => _showClearAllDialog(context),
               child: const Text('Clear All'),
             ),
         ],
       ),
-      body: isLoading
+      body: library.isLoadingFavorites
           ? const Center(child: CircularProgressIndicator())
-          : favoriteBooks.isEmpty
-          ? _buildEmptyState()
-          : _buildFavoritesList(),
-    );
-  }
-
-  Widget _buildEmptyState() {
-    return const Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.favorite_outline,
-            size: 100,
-            color: Colors.grey,
-          ),
-          SizedBox(height: 16),
-          Text(
-            'No favorites yet',
-            style: TextStyle(
-              fontSize: 18,
-              color: Colors.grey,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          SizedBox(height: 8),
-          Text(
-            'Books you favorite will appear here',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFavoritesList() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Text(
-            '${favoriteBooks.length} book${favoriteBooks.length == 1 ? '' : 's'}',
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.grey[600],
-            ),
-          ),
-        ),
-        Expanded(
-          child: ListView.builder(
-            itemCount: favoriteBooks.length,
-            itemBuilder: (context, index) {
-              return _buildFavoriteItem(favoriteBooks[index]);
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildFavoriteItem(Book book) {
-    return Dismissible(
-      key: Key('favorite_${book.id}'),
-      direction: DismissDirection.endToStart,
-      onDismissed: (direction) {
-        _removeFavorite(book.id);
-      },
-      background: Container(
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        color: Colors.red,
-        child: const Icon(
-          Icons.delete,
-          color: Colors.white,
-          size: 28,
-        ),
-      ),
-      child: ListTile(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => BookDetailScreen(book: book),
-            ),
-          ).then((_) {
-            // Reload favorites khi quay lại từ detail screen
-            _loadFavorites();
-          });
-        },
-        leading: Hero(
-          tag: 'book_${book.id}',
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: Image.asset(
-              book.coverImage,
-              width: 60,
-              height: 80,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                return Container(
-                  width: 60,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(8),
+          : library.favoritesError != null
+          ? Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(library.favoritesError!),
+                  TextButton(
+                    onPressed: library.loadFavorites,
+                    child: const Text('Retry'),
                   ),
-                  child: const Icon(
-                    Icons.book,
-                    color: Colors.grey,
+                ],
+              ),
+            )
+          : books.isEmpty
+          ? const Center(child: Text('No favorites yet'))
+          : ListView.builder(
+              itemCount: books.length,
+              itemBuilder: (context, index) =>
+                  _buildFavoriteItem(context, books[index]),
+            ),
+    );
+  }
+
+  Widget _buildFavoriteItem(BuildContext context, Book book) {
+    final library = UserLibraryScope.of(context);
+    return ListTile(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => BookDetailScreen(book: book)),
+      ),
+      leading: BookCover(book: book, width: 60, height: 80),
+      title: Text(book.title),
+      subtitle: Text(book.author),
+      trailing: IconButton(
+        icon: const Icon(Icons.favorite, color: Colors.red),
+        onPressed: library.isWritingFavorite(book.id)
+            ? null
+            : () async {
+                final uid = library.uid;
+                final saved = await library.setFavorite(book.id, false);
+                if (!context.mounted || library.uid != uid) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      saved
+                          ? 'Removed from favorites'
+                          : 'Favorite could not be removed. Retry.',
+                    ),
                   ),
                 );
               },
-            ),
-          ),
-        ),
-        title: Text(
-          book.title,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-          ),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              book.author,
-              style: TextStyle(
-                color: Colors.blue[600],
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              book.description,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey[600],
-              ),
-            ),
-          ],
-        ),
-        trailing: IconButton(
-          icon: const Icon(
-            Icons.favorite,
-            color: Colors.red,
-          ),
-          onPressed: () {
-            _removeFavorite(book.id);
-          },
-        ),
       ),
     );
   }
 
-  void _showClearAllDialog() {
-    showDialog(
+  void _showClearAllDialog(BuildContext context) {
+    showDialog<void>(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Clear All Favorites'),
-          content: const Text('Are you sure you want to remove all books from favorites?'),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () async {
-                await StorageService.clearAllFavorites();
-                Navigator.of(context).pop();
-                await _loadFavorites();
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('All favorites cleared'),
-                    ),
-                  );
-                }
-              },
-              child: const Text('Clear All'),
-            ),
-          ],
-        );
-      },
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Clear All Favorites'),
+        content: const Text(
+          'Are you sure you want to remove all books from favorites?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              final library = UserLibraryScope.of(dialogContext);
+              final uid = library.uid;
+              final cleared = await library.clearFavorites();
+              if (!dialogContext.mounted) return;
+              Navigator.pop(dialogContext);
+              if (!context.mounted || library.uid != uid) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    cleared
+                        ? 'All favorites cleared'
+                        : 'Favorites could not be cleared. Retry.',
+                  ),
+                ),
+              );
+            },
+            child: const Text('Clear All'),
+          ),
+        ],
+      ),
     );
   }
 }

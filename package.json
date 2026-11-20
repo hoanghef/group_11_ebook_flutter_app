@@ -1,0 +1,13 @@
+{
+  "private": true,
+  "scripts": {
+    "test:rules": "firebase emulators:exec --only firestore --project demo-ebook \"node --test test_rules/*.test.mjs\"",
+    "test:tools": "node --test test_tools/*.test.mjs"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.0",
+    "firebase": "^12.0.0",
+    "firebase-admin": "14.5.1",
+    "firebase-tools": "^14.0.0"
+  }
+}

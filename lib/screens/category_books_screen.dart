@@ -1,53 +1,48 @@
 import 'package:flutter/material.dart';
 import '../models/book.dart';
-import '../data/sample_books.dart';
+import '../widgets/book_cover.dart';
+import '../controllers/catalog_scope.dart';
 import 'book_detail_screen.dart';
+import 'catalog_state_view.dart';
 
 class CategoryBooksScreen extends StatelessWidget {
-  final String categoryName;
+  final String categoryId;
 
-  const CategoryBooksScreen({
-    super.key,
-    required this.categoryName,
-  });
+  const CategoryBooksScreen({super.key, required this.categoryId});
 
   @override
   Widget build(BuildContext context) {
-    final allBooks = SampleBooks.getAllBooks();
-    final categoryBooks = allBooks
-        .where((book) => book.categories.contains(categoryName))
-        .toList();
+    final catalog = CatalogScope.of(context);
+    final categoryName = catalog.categoryName(categoryId);
+    final categoryBooks = catalog.inCategory(categoryId);
 
     return Scaffold(
       appBar: AppBar(
         title: Text(
           categoryName,
-          style: const TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
         ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: categoryBooks.isEmpty
-          ? _buildEmptyState()
-          : _buildBooksGrid(categoryBooks),
+      body: CatalogStateView(
+        isEmpty: false,
+        emptyMessage: '',
+        child: categoryBooks.isEmpty
+            ? _buildEmptyState(categoryName)
+            : _buildBooksGrid(categoryBooks),
+      ),
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(String categoryName) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.book_outlined,
-            size: 80,
-            color: Colors.grey[400],
-          ),
+          Icon(Icons.book_outlined, size: 80, color: Colors.grey[400]),
           const SizedBox(height: 16),
           Text(
             'No books found',
@@ -60,10 +55,7 @@ class CategoryBooksScreen extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             'No books available in $categoryName category',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[500],
-            ),
+            style: TextStyle(fontSize: 14, color: Colors.grey[500]),
           ),
         ],
       ),
@@ -78,10 +70,7 @@ class CategoryBooksScreen extends StatelessWidget {
           padding: const EdgeInsets.all(16.0),
           child: Text(
             '${books.length} book${books.length == 1 ? '' : 's'}',
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.grey[600],
-            ),
+            style: TextStyle(fontSize: 16, color: Colors.grey[600]),
           ),
         ),
         Expanded(
@@ -108,9 +97,7 @@ class CategoryBooksScreen extends StatelessWidget {
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (context) => BookDetailScreen(book: book),
-          ),
+          MaterialPageRoute(builder: (context) => BookDetailScreen(book: book)),
         );
       },
       child: Container(
@@ -118,7 +105,7 @@ class CategoryBooksScreen extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withValues(alpha: 0.1),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -130,7 +117,7 @@ class CategoryBooksScreen extends StatelessWidget {
             // Book Cover
             Expanded(
               flex: 3,
-              child: Container(
+              child: SizedBox(
                 width: double.infinity,
                 child: Hero(
                   tag: 'book_${book.id}_category',
@@ -139,20 +126,7 @@ class CategoryBooksScreen extends StatelessWidget {
                       topLeft: Radius.circular(12),
                       topRight: Radius.circular(12),
                     ),
-                    child: Image.asset(
-                      book.coverImage,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          color: Colors.grey[300],
-                          child: const Icon(
-                            Icons.book,
-                            size: 40,
-                            color: Colors.grey,
-                          ),
-                        );
-                      },
-                    ),
+                    child: BookCover(book: book),
                   ),
                 ),
               ),
@@ -202,27 +176,31 @@ class CategoryBooksScreen extends StatelessWidget {
                     SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       child: Row(
-                        children: book.categories
-                            .where((cat) => cat != categoryName)
+                        children: book.categoryIds
+                            .where((id) => id != categoryId)
                             .take(2)
-                            .map((category) => Container(
-                          margin: const EdgeInsets.only(right: 4),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.grey[100],
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            category,
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: Colors.grey[700],
-                            ),
-                          ),
-                        ))
+                            .map(
+                              (category) => Container(
+                                margin: const EdgeInsets.only(right: 4),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[100],
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  CatalogScope.of(
+                                    context,
+                                  ).categoryName(category),
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: Colors.grey[700],
+                                  ),
+                                ),
+                              ),
+                            )
                             .toList(),
                       ),
                     ),
