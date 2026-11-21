@@ -142,4 +142,4 @@ npm run test:rules
 ## ⚖️ Content Provenance & Git History Notice
 
 - **Current Repository**: Contains 100% original fictional book metadata and previews written for this project. All covers are rendered procedurally by Flutter Canvas (`generated:*` styles). No copyrighted cover images or book texts are bundled.
-- **Git History Notice**: Initial development commits (specifically commit `3fb00f2`) contained legacy cover images. Before publishing or publicizing this repository, review [docs/CONTENT_CREDITS.md](docs/CONTENT_CREDITS.md) for the historical asset audit and recommended history cleaning steps.
+- **Git History (Cleaned)**: Lịch sử commit trong nhánh này đã được làm sạch bằng `git-filter-repo`. Toàn bộ 11 tệp ảnh bìa cũ tại `assets/images/book_covers/` và các nội dung văn bản mẫu cũ chưa xác minh nguồn trong `lib/data/sample_books.dart` đã được loại bỏ hoàn toàn khỏi toàn bộ các commit trong lịch sử. Xem chi tiết kiểm kê tại [docs/CONTENT_CREDITS.md](docs/CONTENT_CREDITS.md).

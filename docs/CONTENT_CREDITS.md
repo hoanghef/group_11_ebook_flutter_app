@@ -34,12 +34,11 @@ bìa vẽ dự phòng; Admin có thể chọn mã mới. Cần migration riêng 
 được đưa vào Firebase development. Không có migration hoặc triển khai Firebase
 trong lần thay này.
 
-**Trạng thái lịch sử:** 11 JPG cũ được gỡ khỏi working tree sau khi kiểm tra
-tất cả đều do Git theo dõi và không có sửa đổi cục bộ. Các ảnh và văn bản cũ
-vẫn có thể truy xuất từ Git history. Trước khi public repo, chủ repo phải quyết
-định cách xử lý history và mọi bản sao đã phát hành hoặc đã đưa vào Firestore.
-Không rewrite history trong lần này. Catalog hiện tại chỉ có preview ngắn,
-không chứa ebook đầy đủ.
+**Trạng thái lịch sử đã làm sạch:** Toàn bộ 11 tệp JPG cũ (`assets/images/book_covers/`)
+và các đoạn văn bản mẫu cũ trong `lib/data/sample_books.dart` đã được loại bỏ hoàn
+toàn khỏi mọi commit trong lịch sử của bản sao này bằng `git-filter-repo`. Toàn bộ
+catalog từ commit đầu tiên đến HEAD chỉ chứa metadata và preview hư cấu do dự án tự biên soạn.
+Bảng kiểm kê bên dưới được lưu lại nhằm mục đích đối chiếu kỹ thuật lịch sử.
 
 ## Kiểm kê lịch sử trước khi thay catalog
 
